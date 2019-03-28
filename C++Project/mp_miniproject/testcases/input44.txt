@@ -1,0 +1,2 @@
+define (f x y)=(+ x y)
+mcint f 100 6 0 8 9

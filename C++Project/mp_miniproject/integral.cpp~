@@ -1,0 +1,345 @@
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <cstdlib>
+#include <iostream>
+#include <random>
+#include <unordered_map>
+#include <utility>
+
+//#include "expr.h"
+typedef std::vector<std::pair<double, std::string> > vector;
+void skipSpace(const char ** strp);
+char * getop(const char ** strp);
+bool check_digit(double n, char * name);
+double parse_t(const char ** strp,
+               std::hash<std::string> & str_hash,
+               std::unordered_map<size_t, vector> & hash_map_func,
+               std::unordered_map<size_t, std::string> & hash_map_rhs);
+
+/* This file is used to fulfill the numint and mcint instructions. This two functions can all be used to calculate the integral of the function under a specific range.
+ */
+
+//
+//
+//
+//
+
+/* This function is used to convert a string of number to a double number.
+ */
+double * getNum(const char ** strp) {
+  skipSpace(strp);
+  char * str = getop(strp);
+  char * endp;
+  double num = strtod(str, &endp);
+  if ((!check_digit(num, str)) || (*endp) != '\0' || (*(--endp)) == '.') {
+    free(str);
+    std::cerr << "Wrong Input\n";
+    return NULL;
+  }
+  free(str);
+  double * ans = new double;
+  *ans = num;
+  return ans;
+}
+
+/* This function takes three paramter:
+ * strp (the pointer to the pointer to a string that needs to be parsed)
+ * v_range (a vector used to save range values in pairs)
+ * v_var (a vector used to save the values of the point)
+ * and return the pair of fname and step value
+ */
+std::pair<std::string, double> * parse_numint(const char ** strp,
+                                              std::vector<std::pair<double, double> > & v_range,
+                                              std::vector<double> & v_var) {
+  skipSpace(strp);
+  char * name = getop(strp);
+  std::string fname(name);
+  free(name);
+  double * num_ptr = getNum(strp);
+  if (num_ptr == NULL) {
+    return NULL;
+  }
+  double num = *num_ptr;
+  delete (num_ptr);
+  while ((**strp) != '\0') {
+    double * left = getNum(strp);
+    double * right = getNum(strp);
+    if (left == NULL || right == NULL || (*left) >= (*right)) {
+      delete (left);
+      delete (right);
+      return NULL;
+    }
+    double l = *left;
+    double r = *right;
+    delete (left);
+    delete (right);
+    std::pair<double, double> var(l, r);
+    v_range.push_back(var);
+    double n = 0;  //initial to 0
+    v_var.push_back(n);
+    skipSpace(strp);
+    //skip pound sign
+    if ((**strp) == '#') {
+      break;
+    }
+  }
+  std::pair<std::string, double> * fname_step = new std::pair<std::string, double>;
+  (*fname_step) = std::make_pair(fname, num);
+  return fname_step;
+}
+
+/* This function takes six parameter:
+ * v_var (the vector used to save point coordinate values)
+ * ans (std::string start with "(fname ")
+ * x (a outside counter int)
+ * n (a inside counter size_t)
+ * size (constant value, the num of dimension of function)
+ * step (step value)
+ * return the add-up std::string.
+ */
+std::string make_str(std::vector<double> & v_var,
+                     std::string & ans,
+                     int x,
+                     size_t n,
+                     size_t size,
+                     size_t step) {
+  if (n == 0) {
+    ans += ")";
+    return ans;
+  }
+  else {  //f(x)
+    if (x % 2 == 1) {
+      ans += std::to_string(v_var[size - n]) + " ";
+      x /= 2;
+      n--;
+      return make_str(v_var, ans, x, n, size, step);
+    }
+    else {  //f(x+h)
+      ans += std::to_string(v_var[size - n] + step) + " ";
+      x /= 2;
+      n--;
+      return make_str(v_var, ans, x, n, size, step);
+    }
+  }
+}
+
+/* This function takes 9 parameter:
+ * fname (function name string)
+ * size (num of dimension of function)
+ * n (outside counter size_t)
+ * step (step value)
+ * v_range (vector of range value in pairs)
+ * v_var (vector of point coordinate value)
+ * str_hash (the std::hash that used to compute the hash value for a std::string)
+ * hash_map_func (the map that used to save function name's hash value and its vector which used to save its parameter names and values) 
+ * hash_map_rhs (the map that used to save function name's hash value and its rhs of the define instructions)
+ * return the integral result.
+ */
+double integral(std::string fname,
+                size_t size,
+                size_t n,
+                double step,
+                std::vector<std::pair<double, double> > & v_range,
+                std::vector<double> & v_var,
+                std::hash<std::string> & str_hash,
+                std::unordered_map<size_t, vector> & hash_map_func,
+                std::unordered_map<size_t, std::string> & hash_map_rhs) {
+  double ans = 0;
+  if (n < v_range.size()) {
+    n++;
+    double i = 0;
+    for (i = v_range[n - 2].first; i < v_range[n - 2].second; i += step) {
+      v_var[n - 2] = i;
+      ans += integral(fname, size, n, step, v_range, v_var, str_hash, hash_map_func, hash_map_rhs);
+    }
+    return ans;
+  }
+  else {
+    double i = 0;
+    for (i = v_range[n - 1].first; i < v_range[n - 1].second; i += step) {
+      v_var[n - 1] = i;
+      double result = 0;
+      int x = pow(2, n) - 1;
+      for (; x >= 0; x--) {
+        std::string str = "(" + fname + " ";
+        size_t size = n;
+        str = make_str(v_var, str, x, n, size, step);
+        //make str to char *
+        char * temp = strdup(str.c_str());
+        const char * strp = temp;
+        result += parse_t(&strp, str_hash, hash_map_func, hash_map_rhs);
+        free(temp);
+      }
+      ans += result;
+    }
+    double y = pow(step / 2, n);
+    ans *= y;
+    return ans;
+  }
+}
+
+/* This function generate the random double value in a given range
+ */
+double random_double(double low, double high) {
+  std::random_device seed;
+  std::mt19937 rnd(seed());
+  std::uniform_real_distribution<> d(low, high);
+  double ans = d(rnd);
+  return ans;
+}
+
+/* This function use the almost same paramter as above,
+ * but calculate the integral in a montecarlo way,
+ * that is using random number to calculate the average value
+ * return the integral result.
+ */
+double monte_carlo(std::string fname,
+                   size_t size,
+                   size_t num,
+                   std::vector<std::pair<double, double> > & v_range,
+                   std::hash<std::string> & str_hash,
+                   std::unordered_map<size_t, vector> & hash_map_func,
+                   std::unordered_map<size_t, std::string> & hash_map_rhs) {
+  double result = 0;
+  for (size_t i = 0; i < num; i++) {
+    std::string str = "(" + fname + " ";
+    for (size_t j = 0; j < size; j++) {
+      double low = v_range[j].first;
+      double high = v_range[j].second;
+      double var = random_double(low, high);
+      str += std::to_string(var) + " ";
+    }
+    str += ")";
+    char * temp = strdup(str.c_str());
+    const char * strp = temp;
+    result += parse_t(&strp, str_hash, hash_map_func, hash_map_rhs);
+    free(temp);
+  }
+  result /= num;
+  for (size_t i = 0; i < size; i++) {
+    double sub = v_range[i].second - v_range[i].first;
+    result = result * sub;
+  }
+  return result;
+}
+
+/* this function checks the validity of step number,
+ * which requires to be positive, and satisfy low+step<=high
+ */
+bool check_step(double step, std::vector<std::pair<double, double> > & v_range) {
+  if (step <= 0) {
+    return false;
+  }
+  else {
+    size_t n = v_range.size();
+    for (size_t i = 0; i < n; i++) {
+      double high = v_range[i].second;
+      double low = v_range[i].first;
+      if (low + step > high) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
+/* this function checks the validity of the number of random points
+ * which requires to be positive int.
+ */
+bool check_num(int num, double step) {
+  if (num <= 0) {
+    return false;
+  }
+  else {
+    double num_d = double(num);
+    if (num_d != step) {
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
+}
+
+/* This function calculate the integral using the trapezoid way,
+   and print the result in formatted way.
+*/
+void trapezoid(const char * temp,
+               std::hash<std::string> & str_hash,
+               std::unordered_map<size_t, vector> & hash_map_func,
+               std::unordered_map<size_t, std::string> & hash_map_rhs) {
+  std::vector<std::pair<double, double> > v_range;
+  std::vector<double> v_var;
+  std::pair<std::string, double> * fname_step = parse_numint(&temp, v_range, v_var);
+  if (fname_step == NULL) {
+    std::cerr << "Wrong Input of step or less range number or invalid range number\n";
+    exit(EXIT_FAILURE);
+  }
+  std::string fname = (*fname_step).first;
+  double step = (*fname_step).second;
+  delete (fname_step);
+  //check step
+  if (!check_step(step, v_range)) {
+    std::cerr << "Invalid step num\n";
+    exit(EXIT_FAILURE);
+  }
+  //check fname
+  size_t hashNum = str_hash(fname);
+  std::unordered_map<size_t, vector>::iterator it = hash_map_func.find(hashNum);
+  if (it == hash_map_func.end()) {
+    std::cerr << "Function name undefined.\n";
+    exit(EXIT_FAILURE);
+  }
+  if (it->second.size() != v_var.size()) {
+    std::cerr << "Wrong num of pairs of range nums.\n";
+    exit(EXIT_FAILURE);
+  }
+  //
+  size_t size = v_var.size();
+  size_t n = 1;
+  double ans =
+      integral(fname, size, n, step, v_range, v_var, str_hash, hash_map_func, hash_map_rhs);
+  std::cout << "Integral result: " << ans << "\n";
+}
+
+/* This function calculate the integral using the montecarlo way,
+ * and print the result in formatted way.
+ */
+void random_monteCarlo(const char * temp,
+                       std::hash<std::string> & str_hash,
+                       std::unordered_map<size_t, vector> & hash_map_func,
+                       std::unordered_map<size_t, std::string> & hash_map_rhs) {
+  std::vector<std::pair<double, double> > v_range;
+  std::vector<double> v_var;
+  std::pair<std::string, double> * fname_step = parse_numint(&temp, v_range, v_var);
+  if (fname_step == NULL) {
+    std::cerr << "Wrong Input of step or less range number or invalid range number\n";
+    exit(EXIT_FAILURE);
+  }
+  std::string fname = (*fname_step).first;
+  int num = int((*fname_step).second);
+  //check valid of num
+  if (!check_num(num, (*fname_step).second)) {
+    std::cerr << "Invalid num of random points.\n";
+    delete (fname_step);
+    exit(EXIT_FAILURE);
+  }
+  delete (fname_step);
+  //check fname
+  size_t hashNum = str_hash(fname);
+  std::unordered_map<size_t, vector>::iterator it = hash_map_func.find(hashNum);
+  if (it == hash_map_func.end()) {
+    std::cerr << "Function name undefined.\n";
+    exit(EXIT_FAILURE);
+  }
+  if (it->second.size() != v_var.size()) {
+    std::cerr << "Wrong num of pairs of range nums.\n";
+    exit(EXIT_FAILURE);
+  }
+  //
+  size_t size = v_var.size();
+  double ans = monte_carlo(fname, size, num, v_range, str_hash, hash_map_func, hash_map_rhs);
+  std::cout << "Integral result: " << ans << "\n";
+}

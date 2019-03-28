@@ -1,0 +1,286 @@
+#include <math.h>
+
+#include <cstdio>
+#include <sstream>
+#include <string>
+class Expression
+{
+ public:
+  virtual std::string toString() const = 0;
+  virtual double evaluate() const = 0;
+  virtual ~Expression() {}
+};
+class NumExpression : public Expression
+{
+  double num;
+
+ public:
+  NumExpression(double n) : num(n) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << num;
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const { return num; }
+  virtual ~NumExpression() {}
+};
+
+class PlusExpression : public Expression
+{
+  Expression * _lhs;
+  Expression * _rhs;
+
+ public:
+  PlusExpression(Expression * lhs, Expression * rhs) : _lhs(lhs), _rhs(rhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(" << _lhs->toString() << " + " << _rhs->toString() << ")";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = _lhs->evaluate();
+    answer += _rhs->evaluate();
+    return answer;
+  }
+
+  virtual ~PlusExpression() {
+    delete _lhs;
+    delete _rhs;
+  }
+};
+
+class MinusExpression : public Expression
+{
+  Expression * _lhs;
+  Expression * _rhs;
+
+ public:
+  MinusExpression(Expression * lhs, Expression * rhs) : _lhs(lhs), _rhs(rhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(" << _lhs->toString() << " - " << _rhs->toString() << ")";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = _lhs->evaluate();
+    answer -= _rhs->evaluate();
+    return answer;
+  }
+  virtual ~MinusExpression() {
+    delete _lhs;
+    delete _rhs;
+  }
+};
+
+class TimesExpression : public Expression
+{
+  Expression * _lhs;
+  Expression * _rhs;
+
+ public:
+  TimesExpression(Expression * lhs, Expression * rhs) : _lhs(lhs), _rhs(rhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(" << _lhs->toString() << " * " << _rhs->toString() << ")";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = _lhs->evaluate();
+    answer *= _rhs->evaluate();
+    return answer;
+  }
+
+  virtual ~TimesExpression() {
+    delete _lhs;
+    delete _rhs;
+  }
+};
+
+class DivExpression : public Expression
+{
+  Expression * _lhs;
+  Expression * _rhs;
+
+ public:
+  DivExpression(Expression * lhs, Expression * rhs) : _lhs(lhs), _rhs(rhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(" << _lhs->toString() << " / " << _rhs->toString() << ")";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = _lhs->evaluate();
+    answer /= _rhs->evaluate();
+    return answer;
+  }
+
+  virtual ~DivExpression() {
+    delete _lhs;
+    delete _rhs;
+  }
+};
+
+class ModExpression : public Expression
+{
+  Expression * _lhs;
+  Expression * _rhs;
+
+ public:
+  ModExpression(Expression * lhs, Expression * rhs) : _lhs(lhs), _rhs(rhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(" << _lhs->toString() << " % " << _rhs->toString() << ")";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = fmod(_lhs->evaluate(), _rhs->evaluate());
+    return answer;
+  }
+
+  virtual ~ModExpression() {
+    delete _lhs;
+    delete _rhs;
+  }
+};
+
+class PowExpression : public Expression
+{
+  Expression * _lhs;
+  Expression * _rhs;
+
+ public:
+  PowExpression(Expression * lhs, Expression * rhs) : _lhs(lhs), _rhs(rhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(" << _lhs->toString() << " ^ " << _rhs->toString() << ")";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = pow(_lhs->evaluate(), _rhs->evaluate());
+    return answer;
+  }
+
+  virtual ~PowExpression() {
+    delete _lhs;
+    delete _rhs;
+  }
+};
+
+class SinExpression : public Expression
+{
+  Expression * _lhs;
+
+ public:
+  SinExpression(Expression * lhs) : _lhs(lhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(sin( " << _lhs->toString() << " ))";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = sin(_lhs->evaluate());
+    return answer;
+  }
+
+  virtual ~SinExpression() { delete _lhs; }
+};
+
+class CosExpression : public Expression
+{
+  Expression * _lhs;
+
+ public:
+  CosExpression(Expression * lhs) : _lhs(lhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(cos( " << _lhs->toString() << " ))";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = cos(_lhs->evaluate());
+    return answer;
+  }
+
+  virtual ~CosExpression() { delete _lhs; }
+};
+
+class LogExpression : public Expression
+{
+  Expression * _lhs;
+
+ public:
+  LogExpression(Expression * lhs) : _lhs(lhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(log( " << _lhs->toString() << " ))";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = log(_lhs->evaluate());
+    return answer;
+  }
+
+  virtual ~LogExpression() { delete _lhs; }
+};
+
+class RootExpression : public Expression
+{
+  Expression * _lhs;
+
+ public:
+  RootExpression(Expression * lhs) : _lhs(lhs) {}
+  virtual std::string toString() const {
+    std::string answer;
+    std::stringstream stream;
+    stream << "(sqrt( " << _lhs->toString() << " ))";
+    answer = stream.str();
+    stream.clear();
+    return answer;
+  }
+  virtual double evaluate() const {
+    double answer = 0;
+    answer = sqrt(_lhs->evaluate());
+    return answer;
+  }
+
+  virtual ~RootExpression() { delete _lhs; }
+};

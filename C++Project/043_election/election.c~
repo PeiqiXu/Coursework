@@ -1,0 +1,77 @@
+#include "election.h"
+
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+//include any other headers you need here...
+
+state_t parseLine(const char * line) {
+  state_t stateline;
+  int i = 0;
+  for (int a = 0; line[a] != ':'; a++) {
+    if ((!isalpha(line[a])) && (line[a] != ' ')) {
+      printf("Invalid Input Format 1!\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+  for (; line[i] != ':'; i++) {
+    stateline.name[i] = line[i];
+  }
+  stateline.name[i] = '\0';
+  i++;
+  int j = i;
+  for (int b = j; line[b] != ':'; b++) {
+    if (!isdigit(line[b])) {
+      printf("Invalid Input Format 2!\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+  for (; line[j] != ':'; j++) {
+  }
+  char number[j - i + 1];
+  int k = 0;
+  for (; line[i] != ':'; i++) {
+    number[k] = line[i];
+    k++;
+  }
+  number[k] = '\0';
+  stateline.population = atoi(number);
+  i++;
+  j = i;
+  for (int c = j; line[c] != '\0'; c++) {
+    if (!isdigit(line[c])) {
+      printf("Invalid Input Format 3!\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+  for (; line[j] != '\0'; j++) {
+  }
+  char number_2[j - i + 1];
+  k = 0;
+  for (; line[i] != '\0'; i++) {
+    number_2[k] = line[i];
+    k++;
+  }
+  number_2[k] = '\0';
+  stateline.electoralVotes = atoi(number_2);
+  if (stateline.electoralVotes > stateline.population) {
+    printf("Wrong Inputs!\n");
+    exit(EXIT_FAILURE);
+  }
+  return stateline;
+}
+
+//STEP 1: write me
+
+unsigned int countElectoralVotes(state_t * stateData, uint64_t * voteCounts, size_t nStates) {
+  //STEP 2: write me
+  return 0;
+}
+
+void printRecounts(state_t * stateData, uint64_t * voteCounts, size_t nStates) {
+  //STEP 3: write me
+}
+
+void printLargestWin(state_t * stateData, uint64_t * voteCounts, size_t nStates) {
+  //STEP 4: write me
+}

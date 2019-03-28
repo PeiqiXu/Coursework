@@ -1,0 +1,271 @@
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <cstdlib>
+#include <iostream>
+#include <random>
+#include <unordered_map>
+#include <utility>
+
+#include "expr.h"
+typedef std::vector<std::pair<double, std::string> > vector;
+double parse_t(const char ** strp,
+               std::hash<std::string> & str_hash,
+               std::unordered_map<size_t, vector> & hash_map_func,
+               std::unordered_map<size_t, std::string> & hash_map_rhs);
+void skipSpace(const char ** strp);
+char * getop(const char ** strp);
+double * getNum(const char ** strp);
+bool check_end(const char ** strp);
+bool check_num(int num, double step);
+
+/* This file is used to calculate the maximum and minimum of the function value using the gradient method.
+ * We will set a converged distance and max step number to avoid infinite calculation.
+ */
+
+//
+//
+//
+//
+
+/* This vector take six parameter:
+ * cont (number for max or min, 5 for max and 6 for min)
+ * fname (function name string)
+ * P (point vector)
+ * str_hash
+ * hash_map_func
+ * hash_map_rhs
+ * return the gradient value in a point vector way.
+ */
+std::vector<double> gradient(int cont,
+                             std::string fname,
+                             std::vector<double> & P,
+                             std::hash<std::string> & str_hash,
+                             std::unordered_map<size_t, vector> & hash_map_func,
+                             std::unordered_map<size_t, std::string> & hash_map_rhs) {
+  std::vector<double> result = P;
+  double h = 0.0001;  // set derivative parameter
+  size_t size = P.size();
+  for (size_t i = 0; i < size; i++) {
+    result[i] = 0;
+    for (int k = 0; k < 2; k++) {
+      P[i] += h;
+      std::string str = "(" + fname + " ";
+      for (size_t j = 0; j < size; j++) {
+        str += std::to_string(P[j]) + " ";
+      }
+      str += ")";
+      char * temp = strdup(str.c_str());
+      const char * strp = temp;
+      double value = parse_t(&strp, str_hash, hash_map_func, hash_map_rhs);
+      if (k == 0) {
+        result[i] += value;  //+f(x+h)
+      }
+      else {
+        result[i] -= value;  //-f(x-h)
+      }
+      free(temp);
+      P[i] -= 3 * h;  // make p[i] value next loop right
+    }
+    P[i] += 4 * h;  //make p[i] return to original value
+    result[i] = result[i] / (2 * h);
+
+    if (cont == 6) {
+      result[i] = 0 - result[i];  //when min, get inverse ans
+    }
+  }
+  return result;
+}
+
+/* This function return the distance between two n-dimensional points.
+ */
+double dis(std::vector<double> & p, std::vector<double> & q) {
+  size_t n = p.size();
+  double result = 0;
+  for (size_t i = 0; i < n; i++) {
+    double sub = p[i] - q[i];
+    sub = sub * sub;
+    result += sub;
+  }
+  result = sqrt(result);
+  return result;
+}
+
+/* This function return the maximum or minimum point vectir.
+ */
+std::vector<double> gradient_method(int cont,
+                                    std::string fname,
+                                    double gamma,
+                                    double convergedDistance,
+                                    std::vector<double> & P_curr,
+                                    int num,  // max step num to avoid infinite loop
+                                    std::hash<std::string> & str_hash,
+                                    std::unordered_map<size_t, vector> & hash_map_func,
+                                    std::unordered_map<size_t, std::string> & hash_map_rhs) {
+  std::vector<double> P_new = P_curr;
+  std::vector<double> grad = gradient(cont, fname, P_curr, str_hash, hash_map_func, hash_map_rhs);
+  size_t size = P_new.size();
+  for (size_t i = 0; i < size; i++) {
+    P_new[i] += gamma * grad[i];
+  }
+  num--;
+  if (num == 0) {
+    return P_new;
+  }
+  double distance = dis(P_new, P_curr);
+  if (distance <= convergedDistance) {
+    return P_new;
+  }
+  return gradient_method(
+      cont, fname, gamma, convergedDistance, P_new, num, str_hash, hash_map_func, hash_map_rhs);
+}
+
+/* This function get and return the function name string.
+ */
+std::string get_fname(const char ** strp) {
+  char * name = getop(strp);
+  if (name == NULL) {
+    std::cerr << "Invalid input of min max\n";
+    exit(EXIT_FAILURE);
+  }
+  std::string fname(name);
+  free(name);
+  return fname;
+}
+
+/* This function get and return the gamma value.
+ */
+double get_gamma(const char ** strp) {
+  double * ptr = getNum(strp);
+  if (ptr == NULL) {
+    std::cerr << "Invalid input of min max\n";
+    exit(EXIT_FAILURE);
+  }
+  double gamma = *ptr;
+  delete (ptr);
+  return gamma;
+}
+
+/* This function get and return the converged distance value.
+ */
+double get_distance(const char ** strp) {
+  double * ptr = getNum(strp);
+  if (ptr == NULL) {
+    std::cerr << "Invalid input of min max\n";
+    exit(EXIT_FAILURE);
+  }
+  double distance = *ptr;
+  delete (ptr);
+  if (distance < 0) {
+    std::cerr << "Invalid input of converged distance\n";
+    exit(EXIT_FAILURE);
+  }
+  return distance;
+}
+
+/* This function get and return the vector for start point with coordinate values in it.
+ */
+std::vector<double> get_startPoint(const char ** strp, size_t n) {
+  std::vector<double> startPoint;
+  for (size_t i = 0; i < n; i++) {
+    double * ptr = getNum(strp);
+    if (ptr == NULL) {
+      std::cerr << "Invalid input of min max\n";
+      exit(EXIT_FAILURE);
+    }
+    startPoint.push_back(*ptr);
+    delete (ptr);
+  }
+  return startPoint;
+}
+
+/* This function get and return the max step number value.
+ */
+int get_max_step_num(const char ** strp) {
+  double * ptr = getNum(strp);
+  if (ptr == NULL) {
+    std::cerr << "Invalid input of min max\n";
+    exit(EXIT_FAILURE);
+  }
+  int max_step_num = int(*ptr);
+  if (!check_num(max_step_num, (*ptr))) {
+    std::cerr << "Invalid max step number.\n";
+    delete (ptr);
+    exit(EXIT_FAILURE);
+  }
+  delete (ptr);
+  return max_step_num;
+}
+
+/* This function calculate the value of the point in the function, 
+ * and returns its value.
+ */
+double get_functionValue(std::string fname,
+                         std::vector<double> & ans,
+                         std::hash<std::string> & str_hash,
+                         std::unordered_map<size_t, vector> & hash_map_func,
+                         std::unordered_map<size_t, std::string> & hash_map_rhs) {
+  std::string str = "(" + fname + " ";
+  for (size_t j = 0; j < ans.size(); j++) {
+    str += std::to_string(ans[j]) + " ";
+  }
+  str += ")";
+  char * str_ptr = strdup(str.c_str());
+  const char * str_ptr_c = str_ptr;
+  double value = parse_t(&str_ptr_c, str_hash, hash_map_func, hash_map_rhs);
+  free(str_ptr);
+  return value;
+}
+
+/* This function do the print work.
+ */
+void print_gradient_result(int cont, double value) {
+  if (cont == 5) {
+    std::cout << "Max value: " << value << "\n";
+  }
+  else {
+    std::cout << "Min value: " << value << "\n";
+  }
+}
+
+/* This function receives cont and do calculation using gradient method, 
+ * when cont==5, it find max value for the function,
+ * when cont==6, it find min value for the function,
+ * and print the result.
+ */
+void get_limit(const char * temp,
+               int cont,
+               std::hash<std::string> & str_hash,
+               std::unordered_map<size_t, vector> & hash_map_func,
+               std::unordered_map<size_t, std::string> & hash_map_rhs) {
+  skipSpace(&temp);
+  std::string fname = get_fname(&temp);
+  double gamma = get_gamma(&temp);
+  double convergedDistance = get_distance(&temp);
+  //check fname
+  size_t hashNum = str_hash(fname);
+  std::unordered_map<size_t, vector>::iterator it = hash_map_func.find(hashNum);
+  if (it == hash_map_func.end()) {
+    std::cerr << "Function name undefined.\n";
+    exit(EXIT_FAILURE);
+  }
+  size_t n = it->second.size();
+  std::vector<double> startPoint = get_startPoint(&temp, n);
+  int max_step_num = get_max_step_num(&temp);
+  if (!check_end(&temp)) {
+    std::cerr << "Jibber jabber at the end.\n";
+    exit(EXIT_FAILURE);
+  }
+  std::vector<double> ans = gradient_method(cont,
+                                            fname,
+                                            gamma,
+                                            convergedDistance,
+                                            startPoint,
+                                            max_step_num,
+                                            str_hash,
+                                            hash_map_func,
+                                            hash_map_rhs);
+  double value = get_functionValue(fname, ans, str_hash, hash_map_func, hash_map_rhs);
+  print_gradient_result(cont, value);
+}

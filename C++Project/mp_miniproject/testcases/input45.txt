@@ -1,0 +1,2 @@
+define (f x)=(/ x 2)
+mcint f 10000 0 2

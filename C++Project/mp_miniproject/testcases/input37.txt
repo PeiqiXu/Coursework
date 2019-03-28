@@ -1,0 +1,2 @@
+define (f x y)=(+ (* 2 x) y)
+mcint f 10000 -1 1 4 5 # the same example as before

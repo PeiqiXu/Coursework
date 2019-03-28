@@ -1,0 +1,2 @@
+define (f x)=(/ x 2)
+numint f 0.01 0 2 #test pound sign

@@ -1,0 +1,5 @@
+define (f x y)=(+ x y)
+define (g x y)=(* x (f x y))
+define (h x y z)=(g (f y z) x)
+test (h 1 2 3) 5
+test (h 2.7 (g 3.5 -9.06) (f 7 (g 0.9 2.3))) 0

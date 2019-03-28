@@ -1,0 +1,7 @@
+define (f a b c d)=(* (/ a b) (% c d))
+define (g a b c)=(pow (f a b a c) c)
+test (g (f 2.7 -1.5 -90.8 88.6) (g 2 5 2) (f (g 3 2 1) 2 9 8)) 0
+test 0 (g 2 3 1)
+numint g 0.01 3 4 2 3 1 2
+mcint g 100 3 4 2 3 1 2
+max g 0.01 0.0001 2 3 1 100
